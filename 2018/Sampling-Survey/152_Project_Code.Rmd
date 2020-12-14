@@ -1,0 +1,178 @@
+---
+title: "Stat 152 Project Code (Group 12)"
+author: "Julien YU"
+date: "2018/5/2"
+output: html_document
+---
+
+```{r, echo = TRUE}
+rawdata <- read.table(file = "~/Desktop/Sampling-Survey/04372-0001-Data.tsv", sep = '\t', header = TRUE)
+dat <- data.frame(rawdata$Q1, rawdata$Q4, rawdata$Q6_COMP, rawdata$Q7, rawdata$Q17, rawdata$Q18, rawdata$BMI, rawdata$Q76, rawdata$Q80, rawdata$Q82, rawdata$Q83, rawdata$Q85_COMP, rawdata$Q86, rawdata$Q88A, rawdata$Q88A_COMP, rawdata$Q88B, rawdata$Q88B_COMP, rawdata$STU_WT)
+coltitle <- colnames(dat) <- c('gender', 'grade', 'race', 'urbanicity', 'mothereduc', 'fathereduc', 'BMI', 'familywellof', 'senseofsafety', 'tobacco_yn', 'tobacco_freq', 'alcohol_yn', 'alcohol_freq', 'marijuana_freq_hs', 'marijuana_yn_hs', 'inhalant_freq', 'inhalant_yn', 'student_weight')
+for (i in 1:nrow(dat)){
+  if (dat$marijuana_yn_hs[i] == -8){
+    dat$marijuana_freq_hs[i] <- -8
+  }
+}
+# The questions for marijuana use were designed for "high school students only". Hence, for Q88A (marijuana_freq_hs), we need to differentiate the nonresponse by middle school students from the nonresponse by high school students. '-8' means that the respondent is not qualified for answering a specific question.
+```
+
+```{r, echo = TRUE}
+# Standard summary of variables
+# General rule: xxx_yn means yes-no question, and xxx_freq means question with options sorted by frequency.
+# 1. gender (1 = Boy, 2 = Girl)
+# 2. grade (1 = 5th, 2 = 6th, 3 = 7th, 4 = 8th, 5 = 9th, 6 = 10th)
+# 3. race (1 = Native or Alaska Native, 2 = Asian, 3 = African, 4 = Hawaiian or other Pacific Islander, 5 = White, 6 = two or more, -9 = nonresponse)
+# 4. urbanicity (1 = urban, 2 = suburban, 3 = rural, -9 = nonresponse)
+# 5. mothereduc (Mother's highest education: 1 = some high school or less, 2 = high school, 3 = some college, 4 = college or more, 5 = don't know, -9 = nonresponse)
+# 6. fathereduc (Father's highest education: 1 = some high school or less, 2 = high school, 3 = some college, 4 = college or more, 5 = don't know, -9 = nonresponse)
+# 7. BMI (Quantitative Variable, -9 = nonresponse)
+# 8. familywellof (1 = very, 2 = quite, 3 = average, 4 = not very, 5 = not at all, -9 = nonresponse)
+# 9. senseofsafety (1 = always, 2 = mostly, 3 = sometimes, 4 = rarely or never, -9 = nonresponse)
+# 10. tobacco_yn (1 = yes, 2 = no, -9 = nonresponse)
+# 11. tobacco_freq (1 = daily, 2 = daily to weekly, 3 = fewer than weekly, 4 = nonsmoker, -9 = nonresponse)
+# 12. alcohol_yn (1 = yes, 2 = no, -9 = nonresponse)
+# 13. alcohol_freq (1 = never, 2 = once, 3 = 2-3 times, 4 = 4-10 times, 5 = more than 10 times, -9 = nonresponse)
+# 14. marijuana_freq_hs (Question only for high school students: 1 = never, 2 = 1-2 times, 3 = 3-5 times, 4 = 6-9 times, 5 = 10-19 times, 6 = 20-39 times, 7 = 40 times or more, -9 = nonresponse of high school students, -8 = nonresponse of middle school students)
+# 15. marijuana_yn_hs (Question only for high school students: 1 = yes, 2 = no, -9 = nonresponse of high school students, -8 = nonresponse of middle school students)
+# 16. inhalant_freq (1 = never, 2 = 1-2 times, 3 = 3-5 times, 4 = 6-9 times, 5 = 10-19 times, 6 = 20-39 times, 7 = 40 times or more, -9 = nonresponse)
+# 17. inhalant_yn (1 = yes, 2 = no, -9 = nonresponse)
+# 18. student weight: unique value
+```
+
+```{r, echo = TRUE}
+# Nonresponse check: calculate the frequencies of "-9".
+nonresponse_rate <- c()
+for (i in 1:ncol(dat)){
+  nonresponse_rate <- c(nonresponse_rate, c(nrow(dat[dat[,i] == -9,])/nrow(dat)))
+}
+nonresponse_rate = as.data.frame(nonresponse_rate)
+row.names(nonresponse_rate) <- coltitle
+nonresponse_rate[,1]
+# The nonresponse rates are stated above. It turns out that nonresponse is acceptable for the survey questions we are interested in.
+```
+
+```{r, include = FALSE}
+hist(dat$gender, breaks=seq(0,2,by=1), freq = TRUE, ylim = c(0, 9000), xlab = "Gender", main = "Gender counts", labels = c("male", "female"))
+hist(dat$alcohol_freq, ylim = c(0, 12000), xlim = c(-11,5), freq = TRUE, xlab = "Frequency of being dunk", main = "Drunk frequency", labels = c("Non-response", " ", " ", " ", " ", " ", " ", " ", " ", "0", "1", "2-3", "4-10", ">10"))
+hist(dat$inhalant_yn, ylim = c(0, 13000), xlim = c(-10,2), freq = TRUE, xlab = "Use inhalant or not", main = "Inhalant Use", labels = c("Non-response", " ", " ", " ", " ", " ", " ", " ", " ", "yes", "no"))
+hist(dat$tobacco_yn, ylim = c(0, 12000), xlim = c(-11,5), freq = TRUE, xlab = "The use of smoking tobacco", main = "Tobacco use Yes/No")
+hist(dat$mothereduc, ylim = c(0, 12000), xlim = c(-11,5), freq = TRUE, xlab = "Education levels", main = "Mother education")
+hist(dat$student_weight, ylim = c(0, 6000), xlab = "Student weight", freq = TRUE, main = "Student weight")
+```
+
+```{r, include = FALSE}
+dat$gender = factor(dat$gender, levels = 1:2, labels = c("M", "F"))
+dat$grade = factor(dat$grade, levels=1:6, labels = c("5th", "6th", "7th", "8th", "9th", "10th"))
+dat$race = factor(dat$race, levels=1:6, labels = c("Native", "Asian", "African", "Hawaiian", "White", "two or more"))
+dat$urbanicity = factor(dat$urbanicity, levels=1:3, labels = c("Urban", "Surburban", "Rural"))
+dat$mothereduc = factor(dat$mothereduc, levels=1:4, labels = c("Some high school or less", "high school", "some college", "college or more"))
+dat$fathereduc = factor(dat$fathereduc, levels=1:4, labels = c("Some high school or less", "high school", "some college", "college or more"))
+dat$familywellof = factor(dat$familywellof, levels=1:5, labels = c("very", "quite", "average", "not very", "not at all"))
+dat$senseofsafety = factor(dat$senseofsafety, levels=1:4, labels = c("always", "mostly", "sometimes", "rarely or never"))
+```
+
+```{r, echo = TRUE}
+# Unweighted boxplots
+# "Index" is a combined addiction index that denotes the extent to which a student is addicted to tobacco, alcohol, inhalant and marijuana.
+# Only high school students are sampled.
+library(ggplot2)
+hs_resp = dat[dat$tobacco_yn != -9 & dat$tobacco_freq != -9 & dat$alcohol_yn != -9 & dat$alcohol_freq != -9 & dat$inhalant_yn != -9 & dat$inhalant_freq != -9 & dat$marijuana_yn_hs > -8 & dat$marijuana_freq_hs > -8,]
+hs_resp$index = 14 + hs_resp$tobacco_yn + hs_resp$tobacco_freq + hs_resp$alcohol_yn - hs_resp$alcohol_freq + hs_resp$inhalant_yn - hs_resp$inhalant_freq + hs_resp$marijuana_yn_hs - hs_resp$marijuana_freq_hs
+hs_resp$index_tob = hs_resp$tobacco_yn + hs_resp$tobacco_freq - 2
+hs_resp$index_alc = hs_resp$alcohol_yn - hs_resp$alcohol_freq + 4
+hs_resp$index_inh = hs_resp$inhalant_yn - hs_resp$inhalant_freq + 6
+hs_resp$index_mar = hs_resp$marijuana_yn_hs - hs_resp$marijuana_freq_hs + 6
+ggplot(data = hs_resp) + geom_boxplot(aes(x = gender, y = index)) + ggtitle("Index Difference Between Genders")
+ggplot(data = hs_resp) + geom_boxplot(aes(x = grade, y = index)) + ggtitle("Index Difference Among Ages")
+ggplot(data = hs_resp[!is.na(hs_resp$race),]) + geom_boxplot(aes(x = race, y = index)) + ggtitle("Index Difference Among Races")
+ggplot(data = hs_resp[!is.na(hs_resp$urbanicity),]) + geom_boxplot(aes(x = urbanicity, y = index)) + ggtitle("Index Difference Among Urbanicities")
+ggplot(data = hs_resp[!is.na(hs_resp$mothereduc),]) + geom_boxplot(aes(x = mothereduc, y = index)) + ggtitle("Index Difference With Respect to Mothers' Education Level")
+ggplot(data = hs_resp[!is.na(hs_resp$fathereduc),]) + geom_boxplot(aes(x = fathereduc, y = index)) + ggtitle("Index Difference With Respect to Fathers' Education Level")
+ggplot(data = hs_resp[!is.na(hs_resp$familywellof),]) + geom_boxplot(aes(x = familywellof, y = index)) + ggtitle("Index Difference Based on Family Well Off")
+ggplot(data = hs_resp[!is.na(hs_resp$senseofsafety),]) + geom_boxplot(aes(x = senseofsafety, y = index)) + ggtitle("Index Difference Based on Sense of Safety")
+```
+
+```{r, echo = TRUE}
+# Weighted graphes with survey package
+library(survey)
+svy = svydesign(id = ~1, weights = ~student_weight, data = hs_resp, nest = T)
+# Histograms (weighted)
+par(mfrow = c(1,5))
+svyhist(~index_tob, svy, main = "tobacco", xlab = "Tobacco Index")
+svyhist(~index_alc, svy, main = "alcohol", xlab = "Alcohol Index")
+svyhist(~index_inh, svy, main = "inhalant", xlab = "Inhalant Index")
+svyhist(~index_mar, svy, main = "marijuana", xlab = "Marijuana Index")
+svyhist(~index, svy, main = "total index", xlab = "Total Index")
+# Boxplots of Index vs Gender (weighted)
+par(mfrow = c(1,5))
+svyboxplot(index_tob~gender, svy, main = "Tobacco vs Gender", cex = 0.5)
+svyboxplot(index_alc~gender, svy, main = "Alcohol vs Gender", cex = 0.5)
+svyboxplot(index_inh~gender, svy, main = "Inhalant vs Gender", cex = 0.5)
+svyboxplot(index_mar~gender, svy, main = "Marijuana vs Gender", cex = 0.5)
+svyboxplot(index~gender, svy, main = "Total Index vs Gender", cex = 0.5)
+# Boxplot of Total Index vs Race (weighted)
+par(mfrow = c(1,1))
+svyboxplot(index~race, svy, main = "Total Index vs Race (weighted)")
+# Mean, SE, CI
+index_mean = svymean(~index, svy)
+index_SE = SE(index_mean)
+index_CI = svyquantile(~index, svy, c(0.25,0.5,0.75), ci = TRUE)
+index_mean
+```
+
+```{r, echo = TRUE}
+# Create a pseudo population based on weights. Need 1 minute runtime.
+dat$new_weight = round(dat$student_weight/100)
+pseudo = list(0)
+for( i in 1:nrow(dat)){
+pseudo[[i]] = replicate(dat$new_weight[i], dat[i,])
+}
+popn = data.frame(matrix(unlist(pseudo), nrow = sum(dat$new_weight), byrow = T), stringsAsFactors = FALSE)
+colnames(popn) = c("gender", "grade", "race", "urbanicity", "mothereduc", "fathereduc", "BMI", "familywellof", "senseofsafety", "tobacco_yn", "tobacco_freq", "alcohol_yn", "alcohol_freq", "marijuana_freq_hs", "marijuana_yn_hs", "inhalant_freq", "inhalant_yn", "student_weight", "new_weight")
+
+popn$gender = factor(popn$gender, levels = 1:2, labels = c("M", "F"))
+popn$grade = factor(popn$grade, levels=1:6, labels = c("5th", "6th", "7th", "8th", "9th", "10th"))
+popn$race = factor(popn$race, levels=1:6, labels = c("Native", "Asian", "African", "Hawaiian", "White", "two or more"))
+popn$urbanicity = factor(popn$urbanicity, levels=1:3, labels = c("Urban", "Surburban", "Rural"))
+popn$mothereduc = factor(popn$mothereduc, levels=1:4, labels = c("Some high school or less", "high school", "some college", "college or more"))
+popn$fathereduc = factor(popn$fathereduc, levels=1:4, labels = c("Some high school or less", "high school", "some college", "college or more"))
+popn$familywellof = factor(popn$familywellof, levels=1:5, labels = c("very", "quite", "average", "not very", "not at all"))
+popn$senseofsafety = factor(popn$senseofsafety, levels=1:4, labels = c("always", "mostly", "sometimes", "rarely or never"))
+popn$index = 14 + popn$tobacco_yn + popn$tobacco_freq + popn$alcohol_yn - popn$alcohol_freq + popn$inhalant_yn - popn$inhalant_freq + popn$marijuana_yn_hs - popn$marijuana_freq_hs
+popn$index_tob = popn$tobacco_yn + popn$tobacco_freq - 2
+popn$index_alc = popn$alcohol_yn + popn$alcohol_freq + 4
+popn$index_inh = popn$inhalant_yn + popn$inhalant_freq + 6
+popn$index_mar = popn$marijuana_yn + popn$marijuana_freq + 6
+library(ggplot2)
+
+# Addiction index of each gender with respect to race, urbanicity, parents' education, family well of, and sense of safety.
+ggplot(data = popn[!is.na(popn$race),]) + geom_boxplot(aes(x = race, y = index, fill = gender)) + ggtitle("Index vs Race and Gender")
+ggplot(data = popn[!is.na(popn$urbanicity),]) + geom_boxplot(aes(x = urbanicity, y = index, fill = gender)) + ggtitle("Index vs Urbanicities and Gender")
+ggplot(data = popn[!is.na(popn$mothereduc),]) + geom_boxplot(aes(x = mothereduc, y = index, fill = gender)) + ggtitle("Index vs Mothers's Education Level and Gender")
+ggplot(data = popn[!is.na(popn$fathereduc),]) + geom_boxplot(aes(x = fathereduc, y = index, fill = gender)) + ggtitle("Index vs Fathers's Education Level and Gender")
+ggplot(data = popn[!is.na(popn$familywellof),]) + geom_boxplot(aes(x = familywellof, y = index, fill = gender)) + ggtitle("Index vs Family Well Off and Gender")
+ggplot(data = popn[!is.na(popn$senseofsafety),]) + geom_boxplot(aes(x = senseofsafety, y = index, fill = gender)) + ggtitle("Index vs Sense of Safety and Gender")
+
+# Addiction index of each grade with respect to race, urbanicity, parents' education, family well of, and sense of safety.
+ggplot(data = popn[!is.na(popn$race),]) + geom_boxplot(aes(x = race, y = index, fill = grade)) + ggtitle("Index vs Race and Grade")
+ggplot(data = popn[!is.na(popn$urbanicity),]) + geom_boxplot(aes(x = urbanicity, y = index, fill = grade)) + ggtitle("Index vs Urbanicities and Grade")
+ggplot(data = popn[!is.na(popn$mothereduc),]) + geom_boxplot(aes(x = mothereduc, y = index, fill = grade)) + ggtitle("Index vs Mothers's Education Level and Grade")
+ggplot(data = popn[!is.na(popn$fathereduc),]) + geom_boxplot(aes(x = fathereduc, y = index, fill = grade)) + ggtitle("Index vs Fathers's Education Level and Grade")
+ggplot(data = popn[!is.na(popn$familywellof),]) + geom_boxplot(aes(x = familywellof, y = index, fill = grade)) + ggtitle("Index vs Family Well Off and Grade")
+ggplot(data = popn[!is.na(popn$senseofsafety),]) + geom_boxplot(aes(x = senseofsafety, y = index, fill = grade)) + ggtitle("Index vs Sense of Safety and Grade")
+
+# Addiction index of each gender with respect to BMI
+ggplot(data = popn) + geom_point(aes(x = BMI, y = index, color = gender), size = 0.1, alpha = 1) + labs(x = "BMI", y = "index") + ggtitle("BMI of Index vs Gender")
+ggplot(data = popn) + geom_point(aes(x = BMI, y = index, color = grade), size = 0.1, alpha = 1) + labs(x = "BMI", y = "index") + ggtitle("BMI of Index vs Grade")
+```
+
+```{r, echo = FALSE}
+# Multiple linear regression
+svy0 = svydesign(id = ~1, weight = ~ student_weight, data = hs_resp)
+lm <- svyglm(index ~ gender + grade + race + urbanicity + mothereduc + fathereduc + familywellof + senseofsafety, design = svy0)
+summary(lm) # Multiple linear regression model of the addiction index versus all categorical variables.
+# Weight versus gender/race
+svyboxplot(student_weight~gender, svy, main = "Student Weight vs Gender")
+svyboxplot(student_weight~race, svy, main = "Student Weight vs Race")
+```

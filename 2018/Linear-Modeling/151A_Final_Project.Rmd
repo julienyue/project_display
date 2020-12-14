@@ -1,0 +1,439 @@
+---
+title: "151A Final Project"
+author: "Julien YU"
+date: "2018/4/25"
+output: html_document
+---
+
+```{r, echo = TRUE}
+# 1. Read the table and name the variables
+data <- read.csv(file = "~/Desktop/Linear-Modeling/forestfires.csv", header = TRUE, sep = ",")
+X <- data$X
+Y <- data$Y
+month <- data$month
+day <- data$day
+FFMC <- data$FFMC
+DMC <- data$DMC
+DC <- data$DC
+ISI <- data$ISI
+temp <- data$temp
+RH <- data$RH
+wind <- data$wind
+rain <- data$rain
+area <- data$area
+```
+
+```{r, echo = TRUE}
+# 2.a MLR and SLR on quantitative variables before transformation of the response variable. 
+# Generate 3 different regression models on the quantitative explanatory variables. Record the slope of each variable in all 3 models.
+# y: area. Model 1: MLR on all 8 explanatories. Model 2: MLR on the 4 FWI variables and the 4 weather variables, respectively. Model 3: SLR on each of the 8 variables.
+MLR_FWI = lm(area ~ FFMC + DMC + DC + ISI) # +0.327, +0.073, -0.0009, -0.396
+MLR_weather = lm(area ~ temp + RH + wind + rain) # +1.010, -0.110, +1.279, -2.830
+MLR_total = lm(area ~ FFMC + DMC + DC + ISI + temp + RH + wind + rain) # -0.023, +0.076, -0.005, -0.698, +0.847, -0.196, +1.527, -2.540
+SLR1 = lm(area ~ FFMC) # +0.463
+SLR2 = lm(area ~ DMC) # +0.073
+SLR3 = lm(area ~ DC) # +0.013
+SLR4 = lm(area ~ ISI) # +0.115
+SLR5 = lm(area ~ temp) # +1.073
+SLR6 = lm(area ~ RH) # -0.295
+SLR7 = lm(area ~ wind) # +0.438
+SLR8 = lm(area ~ rain) # -1.584
+orig_8 <- c(-0.023, 0.076, -0.005, -0.698, 0.847, -0.196, 1.527, -2.54)
+orig_4by4 <- c(0.327, 0.073, -0.0009, -0.396, 1.01, -0.11, 1.279, -2.83)
+orig_SLR <- c(0.463, 0.073, 0.013, 0.115, 1.073, -0.295, 0.438, -1.584)
+orig_slope.data <- data.frame(orig_8, orig_4by4, orig_SLR)
+row.names(orig_slope.data) <- c('FFMC', 'DMC', 'DC', 'ISI', 'temp', 'RH', 'wind', 'rain')
+orig_slope.data # Return the slope of each explanatory variable under all three regression models
+orig_r_square <- data.frame(as.numeric(summary(MLR_total)[8]), as.numeric(summary(MLR_FWI)[8]), as.numeric(summary(MLR_weather)[8]), as.numeric(summary(SLR1)[8]), as.numeric(summary(SLR2)[8]), as.numeric(summary(SLR3)[8]), as.numeric(summary(SLR4)[8]), as.numeric(summary(SLR5)[8]), as.numeric(summary(SLR6)[8]), as.numeric(summary(SLR7)[8]), as.numeric(summary(SLR8)[8]))
+colnames(orig_r_square) <- c("MLR_total", "MLR_FWI", "MLR_weather", "FFMC", "DMC", "DC", "ISI", "temp", "RH", "wind", "rain")
+orig_r_square # Return the simple or multiple r-squared for each regression model to evaluate the fitness, with respect to the untransformed data
+# Though the MLR with all 8 explanatories fits the data better than the MLRs with 4 FWI or weather variables, and the latter fits the data better than the SLRs, all r-squared are so small that we need to introduce transformation or more variables for further refinement.
+# Among FWI variables, "DMC" appears to be the most related explanatory variable for our analysis. "ISI" and "rain" have relatively little r-squared in their SLR with respect to "area", and thus are the first ones to be considered unrelated.
+```
+
+```{r, echo = TRUE}
+# 2.b Check the linear regression assumptions for untransformed data
+library(faraway)
+library(car)
+vif(MLR_FWI) # DMC, DC, temp has strong (but not extreme) collinearity with other variables.
+vif(MLR_weather)
+vif(MLR_total)
+qqPlot(MLR_total, main = "QQ-Plot of the MLR model under untransformed data", ylab = "Studentized Residuals") # Check the normality assumption for errors. It turns out that the "area" variable is strongly right-skewed.
+crPlots(MLR_total, main = "Residual Plots of the MLR model under untransformed data", ylab = "Residuals") # Check the linearity assumption and display all 8 residual plots. Regression lines are greatly affected by large "area" values.
+outlierTest(MLR_total) # Row 239, 416 are very distinctive outliers.
+halfnorm(influence(MLR_total)$hat, labs = row.names(data), ylab = "hii", main = "Leverage Plot of the MLR model under untransformed data") # Row 500 is the point with the highest leverage.
+influencePlot(MLR_total, main = "Plot of influential points for the MLR model under untransformed data") # Row 500 is with high leverage but not influential. Row 239, 416 are with low leverage but very large residuals.
+```
+
+```{r, echo = TRUE}
+# 3.a Transformation of the "area" variable
+# A right-skewed response variable means we need to go down the ladder. Hence, log transformation and suggested power transformation can both be options.
+log_area = log(data$area + 1)
+sqrt_area = (data$area)^(1/2)
+cbrt_area = (data$area)^(1/3)
+MLR_log_total = lm(log_area ~ FFMC + DMC + DC + ISI + temp + RH + wind + rain)
+MLR_log_FWI = lm(log_area ~ FFMC + DMC + DC + ISI)
+MLR_log_weather = lm(log_area ~ temp + RH + wind + rain)
+SLR_log_1 = lm(log_area ~ FFMC)
+SLR_log_2 = lm(log_area ~ DMC)
+SLR_log_3 = lm(log_area ~ DC)
+SLR_log_4 = lm(log_area ~ ISI)
+SLR_log_5 = lm(log_area ~ temp)
+SLR_log_6 = lm(log_area ~ RH)
+SLR_log_7 = lm(log_area ~ wind)
+SLR_log_8 = lm(log_area ~ rain)
+# After log transformation, the 3 regression models are all run again to generate the sign of slope coefficients.
+MLR_sqrt_total = lm(cbrt_area ~ FFMC + DMC + DC + ISI + temp + RH + wind + rain)
+MLR_sqrt_FWI = lm(cbrt_area ~ FFMC + DMC + DC + ISI)
+MLR_sqrt_weather = lm(cbrt_area ~ temp + RH + wind + rain)
+MLR_cbrt_total = lm(cbrt_area ~ FFMC + DMC + DC + ISI + temp + RH + wind + rain)
+MLR_cbrt_FWI = lm(cbrt_area ~ FFMC + DMC + DC + ISI)
+MLR_cbrt_weather = lm(cbrt_area ~ temp + RH + wind + rain)
+# Set up a table to record the positive/negative signs of all 8 quantitative explanatory variables under the original model, log transformation and root transformations.
+orig_8 <- c('-', '+', '-', '-', '+', '-', '+', '-')
+orig_4by4 <- c('+', '+', '-', '-', '+', '-', '+', '-')
+orig_SLR <- c('+', '+', '+', '+', '+', '-', '+', '-')
+log_8 <- c('+', '+', '+', '-', '+', '-', '+', '+')
+log_4by4 <- c('+', '+', '+', '-', '+', '-', '+', '+')
+log_SLR <- c('+', '+', '+', '-', '+', '-', '+', '+')
+sqrt_8 <- c('+', '+', '+', '-', '+', '-', '+', '+')
+sqrt_4by4 <- c('+', '+', '+', '-', '+', '-', '+', '+')
+sqrt_SLR <- c('+', '+', '+', '-', '+', '-', '+', '+')
+cbrt_8 <- c('+', '+', '+', '-', '+', '-', '+', '+')
+cbrt_4by4 <- c('+', '+', '+', '-', '+', '-', '+', '+')
+cbrt_SLR <- c('+', '+', '+', '+', '+', '-', '+', '+')
+sgn.data <- data.frame(orig_8, orig_4by4, orig_SLR, log_8, log_4by4, log_SLR, sqrt_8, sqrt_4by4, sqrt_SLR, cbrt_8, cbrt_4by4, cbrt_SLR)
+row.names(sgn.data) <- c('FFMC', 'DMC', 'DC', 'ISI', 'temp', 'RH', 'wind', 'rain')
+sgn.data
+# Signs of log, square root and cube root transformations are all the same for each explanatory variable. 
+```
+
+```{r, echo = TRUE}
+# 3.b Check the multiple/simple r-squared and the linear regression assumptions after the log transformation of "area"
+log_r_square <- data.frame(as.numeric(summary(MLR_log_total)[8]), as.numeric(summary(MLR_log_FWI)[8]), as.numeric(summary(MLR_log_weather)[8]), as.numeric(summary(SLR_log_1)[8]), as.numeric(summary(SLR_log_2)[8]), as.numeric(summary(SLR_log_3)[8]), as.numeric(summary(SLR_log_4)[8]), as.numeric(summary(SLR_log_5)[8]), as.numeric(summary(SLR_log_6)[8]), as.numeric(summary(SLR_log_7)[8]), as.numeric(summary(SLR_log_8)[8]))
+colnames(log_r_square) <- c("MLR_total", "MLR_FWI", "MLR_weather", "FFMC", "DMC", "DC", "ISI", "temp", "RH", "wind", "rain")
+r_square <- rbind(log_r_square, orig_r_square)
+row.names(r_square) <- c("log_r_square", "orig_r_square")
+r_square
+# log transformation of the response variable "area" enhances or at least preserves the multiple r-squared and the simple r-squared of most explanatory variables, except for "temp" and "RH". Need to transform "temp" and "RH" a little bit in the final model.
+vif(MLR_log_FWI) # DMC, DC, temp still has strong (but not extreme) collinearity with other variables.
+vif(MLR_log_weather)
+vif(MLR_log_total)
+qqPlot(MLR_log_total, main = "QQ-Plot of the MLR model after log transformation of y", ylab = "Studentized Residuals") # Check the normality assumption for errors. It turns out that "log_area" is much more normal than "area".
+crPlots(MLR_log_total, main = "Residual Plots of the MLR model after log transformation of y", ylab = "Residuals") # Check the linearity assumption and display all 8 residual plots. After the log transformation of "area", most residual plots demonstrate certain extent of linearity. The explanatories "FFMC", "DC" and "temp" show some nonlinearity. Given that most values of "rain" are 0, we consider converting it into a dummy variable.
+outlierTest(MLR_log_total) # Row 239 is still an outlier, but of far less extreme p-value.
+halfnorm(influence(MLR_log_total)$hat, labs = row.names(data), ylab = "hii", main = "Leverage plot of the MLR model after log transformation of y") # Row 500 is still the highest leverage point.
+influencePlot(MLR_log_total, main = "Plot of influential points for the MLR model after log transformation of y") # Row 500 is still the highest leverage point because of the heavy rain, and its residuals are also increased. The Cook's distance of every other data point is decreased and stablized. Row 239 is still with low leverage but very large residuals.
+```
+
+```{r, echo = TRUE}
+# 3.c Analysis on the outlier and the high leverage point
+# The log transformation already decreased the extremity of row 239. Nevertheless, the p-value of row 239 and the high leverage of row 500 are worth further observation. On the basis of the MLR model after log tranformation of the "area" variable, I examine both row 239 and row 500.
+# Row 239 is with regular values of explanatory variables and an extreme response "area" variable. Its residual is much decreased after the log transformation of the "area" variable, and is no longer far away from other data points on the influence plot. Hence, I decide not to take it away.
+# Row 500 is with regular value of the response variable and an extreme explanatory "rain" variable. It is intuitive that a heavy rain can possibly extinguish forest fires. Hence, I decide to change the "rain" column into two dummy variables: rain_1 and rain_2.
+# rain_1 = 0 for any day without rain, rain_1 = 1 for any day with rain
+# rain_2 = 0 for any day without heavy rain, rain_2 = 1 for any day with heavy rain (>2mm/30min). Only row 500 has rain_2 = 1 in the dataset.
+newdata <- data
+newdata$rain <- NULL
+rain_1 = rep(0, nrow(data))
+rain_2 = rep(0, nrow(data))
+for (i in 1:nrow(data)){
+  if (data$rain[i] > 0){
+    rain_1[i] = 1
+  }
+}
+for (i in 1:nrow(data)){
+  if (data$rain[i] > 2){
+    rain_2[i] = 1
+  }
+}
+rain_1 <- data.frame(rain_1)
+rain_2 <- data.frame(rain_2)
+newdata <- cbind(newdata, data.frame(rain_1))
+newdata <- cbind(newdata, data.frame(rain_2))
+rain_1 <- newdata$rain_1
+rain_2 <- newdata$rain_2
+```
+
+```{r, echo = TRUE}
+# 3.d Power transformation of explanatory variables
+# In the linearity test of 3.b, we concluded that the SLR of "area" with respect to "temp", "FFMC" and "DC" are nonlinear. In order to correct those nonlinearities and to increase the multiple R-squared, I am doing power transformation for some x variables. 
+# For the target explanatory variables, an appropriate power is given to increase the multiple R-squared and its significance.
+newtemp <- temp^4.5
+newdata <- cbind(newdata, data.frame(newtemp))
+newRH <- RH^0.05
+newdata <- cbind(newdata, data.frame(newRH))
+newFFMC <- FFMC^0.4
+newdata <- cbind(newdata, data.frame(newFFMC))
+newDC <- DC^0.1
+newdata <- cbind(newdata, data.frame(newDC))
+MLR_xtransf_total = lm(log_area ~ newFFMC + DMC + newDC + ISI + newtemp + newRH + wind + rain_1 + rain_2)
+summary(MLR_xtransf_total)[9]
+summary(MLR_log_total)[9]
+# The adjusted R-squared almost quadruples as a result of the x transformations.
+```
+
+```{r, echo = TRUE}
+# 4.a Categorical variable: month
+# Combine month data and generate a table with counts of fire incidents with respect to month
+data1 <- data[data$month == "jan" & data$area != 0,]
+data2 <- data[data$month == "feb" & data$area != 0,]
+data3 <- data[data$month == "mar" & data$area != 0,]
+data4 <- data[data$month == "apr" & data$area != 0,]
+data5 <- data[data$month == "may" & data$area != 0,]
+data6 <- data[data$month == "jun" & data$area != 0,]
+data7 <- data[data$month == "jul" & data$area != 0,]
+data8 <- data[data$month == "aug" & data$area != 0,]
+data9 <- data[data$month == "sep" & data$area != 0,]
+data10 <- data[data$month == "oct" & data$area != 0,]
+data11 <- data[data$month == "nov" & data$area != 0,]
+data12 <- data[data$month == "dec" & data$area != 0,]
+data1_0 <- data[data$month == "jan",]
+data2_0 <- data[data$month == "feb",]
+data3_0 <- data[data$month == "mar",]
+data4_0 <- data[data$month == "apr",]
+data5_0 <- data[data$month == "may",]
+data6_0 <- data[data$month == "jun",]
+data7_0 <- data[data$month == "jul",]
+data8_0 <- data[data$month == "aug",]
+data9_0 <- data[data$month == "sep",]
+data10_0 <- data[data$month == "oct",]
+data11_0 <- data[data$month == "nov",]
+data12_0 <- data[data$month == "dec",]
+fire_month <- data.frame(nrow(data1), nrow(data2), nrow(data3), nrow(data4), nrow(data5), nrow(data6), nrow(data7), nrow(data8), nrow(data9), nrow(data10), nrow(data11), nrow(data12))
+colnames(fire_month) <- c("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+sample_month <- data.frame(nrow(data1_0), nrow(data2_0), nrow(data3_0), nrow(data4_0), nrow(data5_0), nrow(data6_0), nrow(data7_0), nrow(data8_0), nrow(data9_0), nrow(data10_0), nrow(data11_0), nrow(data12_0))
+colnames(sample_month) <- c("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+data_month <- rbind(fire_month, sample_month)
+colnames(data_month) <- c("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+row.names(data_month) <- c("monthly big fires", "monthly total fires")
+data_month
+# Due to the variability of the monthly data, I decide to include "month" into the analysis, using 2 dummy variables.
+# High fire risk: aug, sep. Medium fire risk: mar, jul. Low fire risk: jan, feb, apr, may, jun, oct, nov, dec.
+# month_1 = 0 for any month with low fire risk, month_1 = 1 for any month with medium or high fire risk.
+# month_2 = 0 for any month with low or medium fire risk, month_2 = 1 for any month with high fire risk.
+month_1 = rep(0, nrow(data))
+month_2 = rep(0, nrow(data))
+for (i in 1:nrow(data)){
+  if (data$month[i] == "aug" | data$month[i] == "sep" | data$month[i] == "mar" | data$month[i] == "jul"){
+    month_1[i] = 1
+  }
+}
+for (i in 1:nrow(data)){
+  if (data$month[i] == "aug" | data$month[i] == "sep"){
+    month_2[i] = 1
+  }
+}
+month_1 <- data.frame(month_1)
+month_2 <- data.frame(month_2)
+newdata <- cbind(newdata, data.frame(month_1))
+newdata <- cbind(newdata, data.frame(month_2))
+month_1 <- newdata$month_1
+month_2 <- newdata$month_2
+# However, it turns out that due to the great variability of the distribution patterns between different months, using 12 - 1 = 11 dummy variables for months could achieve better multiple r-squared and adjusted r-squared than using 2 (high, medium and low risk months). 
+```
+
+```{r, echo = TRUE}
+# 4.b Categorical variable: day
+# Combine day data and generate a table with counts of fire incidents with respect to day
+data_1 <- data[data$day == "mon" & data$area != 0,]
+data_2 <- data[data$day == "tue" & data$area != 0,]
+data_3 <- data[data$day == "wed" & data$area != 0,]
+data_4 <- data[data$day == "thu" & data$area != 0,]
+data_5 <- data[data$day == "fri" & data$area != 0,]
+data_6 <- data[data$day == "sat" & data$area != 0,]
+data_7 <- data[data$day == "sun" & data$area != 0,]
+data_1_0 <- data[data$day == "mon",]
+data_2_0 <- data[data$day == "tue",]
+data_3_0 <- data[data$day == "wed",]
+data_4_0 <- data[data$day == "thu",]
+data_5_0 <- data[data$day == "fri",]
+data_6_0 <- data[data$day == "sat",]
+data_7_0 <- data[data$day == "sun",]
+fire_day <- data.frame(nrow(data_1), nrow(data_2), nrow(data_3), nrow(data_4), nrow(data_5), nrow(data_6), nrow(data_7))
+colnames(fire_day) <- c("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+sample_day <- data.frame(nrow(data_1_0), nrow(data_2_0), nrow(data_3_0), nrow(data_4_0), nrow(data_5_0), nrow(data_6_0), nrow(data_7_0))
+colnames(sample_day) <- c("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+data_day <- rbind(fire_day, sample_day)
+colnames(data_day) <- c("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+row.names(data_day) <- c("daily big fires", "daily total fires")
+data_day # Counts of big fires (more than 100 square meters) spread evenly between days in a week.
+# Use one more dummy variable "day_0" to denote the difference between weekdays (mon - thu) and weekends (fri - sun). It turns out that 1 dummy variable is enough to highlight the impact of days: 7 - 1 = 6 dummy variables would result in a smaller adjusted R-squared.
+# day_0 = 0 for weekdays (mon - thu), day_0 = 1 for weekends (fri - sun).
+day_0 = rep(0, nrow(data))
+for (i in 1:nrow(data)){
+  if (data$day[i] == "fri" | data$day[i] == "sat" | data$day[i] == "sun"){
+    day_0[i] = 1
+  }
+}
+day_0 <- data.frame(day_0)
+newdata <- cbind(newdata, data.frame(day_0))
+day_0 <- newdata$day_0
+```
+
+```{r, echo = TRUE}
+# 4.c Spatial coordinates: should they be considered?
+library(ggplot2)
+ggplot(data, aes(X, Y), xlim = c(0,10), ylim = c(0,10)) + geom_bin2d() + ggtitle("Heat Map of Spatial Coordinates")
+# From the heat map, we can divide the location spots into 3 categories:
+# Most frequent fires: (8,6), (6,5), (3,4), (7,4)
+# Frequent fires: (1,2), (2,2), (4,3), (6,3), (1,4), (2,4), (4,4), (5,4), (2,5), (4,5)
+# Not frequent or no fire: all the other coordinates
+
+# Define 2 Dummy Variables: coord_1 and coord_2
+# coord_1 = 0 if not frequent or no fire, coord_1 = 1 if frequent or most frequent fires
+# coord_2 = 0 if frequent, not frequent or no fire, coord_2 = 1 if most frequent fires
+# Add two more columns of data to represent the values of the dummy variables denoting spatial coordinates
+coord_1 = rep(0, nrow(data))
+coord_2 = rep(0, nrow(data))
+for (i in 1:nrow(data)){
+  if (data$X[i] == "8" & data$Y[i] == "6" | data$X[i] == "6" & data$Y[i] == "5" | data$X[i] == "3" & data$Y[i] == "4" | data$X[i] == "7" & data$Y[i] == "4"){
+    coord_2[i] = 1
+  }
+}
+for (i in 1:nrow(data)){
+  if (data$X[i] == "8" & data$Y[i] == "6" | data$X[i] == "6" & data$Y[i] == "5" | data$X[i] == "3" & data$Y[i] == "4" | data$X[i] == "7" & data$Y[i] == "4" | data$X[i] == "1" & data$Y[i] == "2" | data$X[i] == "2" & data$Y[i] == "2" | data$X[i] == "4" & data$Y[i] == "3" | data$X[i] == "6" & data$Y[i] == "3" | data$X[i] == "1" & data$Y[i] == "4" | data$X[i] == "2" & data$Y[i] == "4" | data$X[i] == "4" & data$Y[i] == "4" | data$X[i] == "5" & data$Y[i] == "4" | data$X[i] == "2" & data$Y[i] == "5" | data$X[i] == "4" & data$Y[i] == "5"){
+    coord_1[i] = 1
+  }
+}
+coord_1 <- data.frame(coord_1)
+coord_2 <- data.frame(coord_2)
+newdata <- cbind(newdata, data.frame(coord_1))
+newdata <- cbind(newdata, data.frame(coord_2))
+coord_1 <- newdata$coord_1
+coord_2 <- newdata$coord_2
+```
+
+```{r, echo = TRUE}
+# 5.a Use of Information Criteria to choose the most suitable model: month and day
+# We first compare the adjusted R-squared for 4 models instead of the multiple R-squared since degree of freedom differs. 
+# Model 1: include all (12-1) and (7-1) dummy variables for months and days. Model 2: reduce the number of dummy variables for months to 2. Model 3: reduce the number of dummy variables for days to 1. Model 4: combine model 2 and model 3.
+MLR_all_include = lm(log_area ~ newFFMC + DMC + newDC + ISI + newtemp + newRH + wind + rain_1 + rain_2 + month + day)
+MLR_month_refined = lm(log_area ~ newFFMC + DMC + newDC + ISI + newtemp + newRH + wind + rain_1 + rain_2 + month_1 + month_2 + day)
+MLR_day_refined = lm(log_area ~ newFFMC + DMC + newDC + ISI + newtemp + newRH + wind + rain_1 + rain_2 + month + day_0)
+MLR_all_refined = lm(log_area ~ newFFMC + DMC + newDC + ISI + newtemp + newRH + wind + rain_1 + rain_2 + month_1 + month_2 + day_0)
+adj_r_squared <- data.frame(as.numeric(summary(MLR_all_include)[9]), as.numeric(summary(MLR_month_refined)[9]), as.numeric(summary(MLR_day_refined)[9]), as.numeric(summary(MLR_all_refined)[9]))
+colnames(adj_r_squared) <- c("month:11,day:6", "month:2,day:6", "month:11,day:1", "month:2,day:1")
+adj_r_squared
+# We then introduce information criteria into our analysis. The smaller the AIC and BIC comparatively, the better the model.
+AIC_all_include = nrow(data)*log(sum(residuals(MLR_all_include)^2)/nrow(data)) + 2*(9+11+6+1)
+AIC_month_refined = nrow(data)*log(sum(residuals(MLR_month_refined)^2)/nrow(data)) + 2*(9+2+6+1)
+AIC_day_refined = nrow(data)*log(sum(residuals(MLR_day_refined)^2)/nrow(data)) + 2*(9+11+1+1)
+AIC_all_refined = nrow(data)*log(sum(residuals(MLR_all_refined)^2)/nrow(data)) + 2*(9+2+1+1)
+BIC_all_include = nrow(data)*log(sum(residuals(MLR_all_include)^2)/nrow(data)) + log(nrow(data))*(9+11+6+1)
+BIC_month_refined = nrow(data)*log(sum(residuals(MLR_month_refined)^2)/nrow(data)) + log(nrow(data))*(9+2+6+1)
+BIC_day_refined = nrow(data)*log(sum(residuals(MLR_day_refined)^2)/nrow(data)) + log(nrow(data))*(9+11+1+1)
+BIC_all_refined = nrow(data)*log(sum(residuals(MLR_all_refined)^2)/nrow(data)) + log(nrow(data))*(9+2+1+1)
+IC <- data.frame(c(AIC_all_include, AIC_month_refined, AIC_day_refined, AIC_all_refined), c(BIC_all_include, BIC_month_refined, BIC_day_refined, BIC_all_refined))
+row.names(IC) <- c("all_include", "month_refined", "day_refined", "all_refined")
+colnames(IC) <- c("AIC", "BIC")
+IC
+# MLR_day_refined has the highest adjusted R-squared. However, MLR_all_refined (with 2 dummy variables denoting months and 1 dummy variable denoting days) ends up having the lowest AIC and BIC, and is therefore the best model at this point.
+```
+
+```{r, echo = TRUE}
+# 5.b Use of Information Criteria to choose the most suitable model: exclude certain explanatory variables
+# In 3.a and 3.b, we found out from the vif chart that some explanatory variables (DMC, DC) have collinearity with others and also from the CR-Plot that some of the variables (FFMC, DC) represent nonlinearity in their SLR with respect to "area". We then did x transformation to "temp" (^4.5), "RH" (^0.05), "FFMC" (^0.4) and "DC" (^0.1) to maximize the multiple R-squared. In this chapter, we want to explore if the complete exclusion of certain variables would actually make the entire model better.
+vif(MLR_all_refined) # newDC and DMC still has collinearity with others.
+summary(MLR_all_refined) # The regression summary shows that a few variables are very insignificant, such as newRH and day_0.
+# Proposal 1: delete variable rain_2 (D = 1 for row 239, D = 0 otherwise)
+MLR_all_refined_p1 = lm(log_area ~ newFFMC + DMC + newDC + ISI + newtemp + newRH + wind + rain_1 + month_1 + month_2 + day_0)
+AIC_all_refined_p1 = nrow(data)*log(sum(residuals(MLR_all_refined_p1)^2)/nrow(data)) + 2*(8+2+1+1)
+BIC_all_refined_p1 = nrow(data)*log(sum(residuals(MLR_all_refined_p1)^2)/nrow(data)) + log(nrow(data))*(8+2+1+1)
+# Proposal 2: delete variable newDC
+MLR_all_refined_p2 = lm(log_area ~ newFFMC + DMC + ISI + newtemp + newRH + wind + rain_1 + rain_2 + month_1 + month_2 + day_0)
+AIC_all_refined_p2 = nrow(data)*log(sum(residuals(MLR_all_refined_p2)^2)/nrow(data)) + 2*(8+2+1+1)
+BIC_all_refined_p2 = nrow(data)*log(sum(residuals(MLR_all_refined_p2)^2)/nrow(data)) + log(nrow(data))*(8+2+1+1)
+# Proposal 3: delete variable newFFMC
+MLR_all_refined_p3 = lm(log_area ~ DMC + newDC + ISI + newtemp + newRH + wind + rain_1 + rain_2 + month_1 + month_2 + day_0)
+AIC_all_refined_p3 = nrow(data)*log(sum(residuals(MLR_all_refined_p3)^2)/nrow(data)) + 2*(8+2+1+1)
+BIC_all_refined_p3 = nrow(data)*log(sum(residuals(MLR_all_refined_p3)^2)/nrow(data)) + log(nrow(data))*(8+2+1+1)
+# Proposal 4: delete variable DMC
+MLR_all_refined_p4 = lm(log_area ~ newFFMC + newDC + ISI + newtemp + newRH + wind + rain_1 + rain_2 + month_1 + month_2 + day_0)
+AIC_all_refined_p4 = nrow(data)*log(sum(residuals(MLR_all_refined_p4)^2)/nrow(data)) + 2*(8+2+1+1)
+BIC_all_refined_p4 = nrow(data)*log(sum(residuals(MLR_all_refined_p4)^2)/nrow(data)) + log(nrow(data))*(8+2+1+1)
+# Proposal 5: delete variable newRH
+MLR_all_refined_p5 = lm(log_area ~ newFFMC + DMC + newDC + ISI + newtemp + wind + rain_1 + rain_2 + month_1 + month_2 + day_0)
+AIC_all_refined_p5 = nrow(data)*log(sum(residuals(MLR_all_refined_p5)^2)/nrow(data)) + 2*(8+2+1+1)
+BIC_all_refined_p5 = nrow(data)*log(sum(residuals(MLR_all_refined_p5)^2)/nrow(data)) + log(nrow(data))*(8+2+1+1)
+# Proposal 6: delete variable day_0
+MLR_all_refined_p6 = lm(log_area ~ newFFMC + DMC + newDC + ISI + newtemp + newRH + wind + rain_1 + rain_2 + month_1 + month_2)
+AIC_all_refined_p6 = nrow(data)*log(sum(residuals(MLR_all_refined_p6)^2)/nrow(data)) + 2*(9+2+1)
+BIC_all_refined_p6 = nrow(data)*log(sum(residuals(MLR_all_refined_p6)^2)/nrow(data)) + log(nrow(data))*(9+2+1)
+# Proposal 7: add spatial coordinates into consideration
+MLR_all_refined_p7 = lm(log_area ~ newFFMC + DMC + newDC + ISI + newtemp + newRH + wind + rain_1 + rain_2 + month_1 + month_2 + day_0 + coord_1 + coord_2)
+AIC_all_refined_p7 = nrow(data)*log(sum(residuals(MLR_all_refined_p7)^2)/nrow(data)) + 2*(9+2+1+2+1)
+BIC_all_refined_p7 = nrow(data)*log(sum(residuals(MLR_all_refined_p7)^2)/nrow(data)) + log(nrow(data))*(9+2+1+2+1)
+IC_p1to7 <- data.frame(c(AIC_all_refined_p1, AIC_all_refined_p2, AIC_all_refined_p3, AIC_all_refined_p4, AIC_all_refined_p5, AIC_all_refined_p6, AIC_all_refined_p7, AIC_all_refined), c(BIC_all_refined_p1, BIC_all_refined_p2, BIC_all_refined_p3, BIC_all_refined_p4, BIC_all_refined_p5, BIC_all_refined_p6, BIC_all_refined_p7, BIC_all_refined), c(as.numeric(summary(MLR_all_refined_p1)[9]), as.numeric(summary(MLR_all_refined_p2)[9]), as.numeric(summary(MLR_all_refined_p3)[9]), as.numeric(summary(MLR_all_refined_p4)[9]), as.numeric(summary(MLR_all_refined_p5)[9]), as.numeric(summary(MLR_all_refined_p6)[9]), as.numeric(summary(MLR_all_refined_p7)[9]), as.numeric(summary(MLR_all_refined)[9])))
+row.names(IC_p1to7) <- c("Proposal 1", "Proposal 2", "Proposal 3", "Proposal 4", "Proposal 5", "Proposal 6", "Proposal 7", "original")
+colnames(IC_p1to7) <- c("AIC", "BIC", "Adjusted R-Squared")
+IC_p1to7
+# Proposals 1-6 have their IC decreased compared to the original refined model. Proposal 2, 4, 5 and 6 also have their adjusted R-squared increased, and thus dominate the original refined model. Proposal 7 turns out to induce smaller adjusted R-squared and larger IC than the "MLR_all_refined" model. I then conclude that the variables "newDC", "DMC", "newRH", "day_0" and the spatial coordinates are irrelevant for our analysis.
+# Final Proposal: Define a new variable FWI_0 to represent the sum of newFFMC and ISI. Exclude variables newDC, DMC, newRH, day_0 and spatial coordinates. Preserve rain_2 to consider the cases of very heavy rain. Only 7 explanatory variables are left in this newest model.
+FWI_0 = newFFMC + ISI
+MLR_all_refined_f = lm(log_area ~ FWI_0 + newtemp + wind + rain_1 + rain_2 + month_1 + month_2)
+AIC_all_refined_f = nrow(data)*log(sum(residuals(MLR_all_refined_f)^2)/nrow(data)) + 2*(5+2+1)
+BIC_all_refined_f = nrow(data)*log(sum(residuals(MLR_all_refined_f)^2)/nrow(data)) + log(nrow(data))*(5+2+1)
+all_refined_f <- data.frame(AIC_all_refined_f, BIC_all_refined_f, summary(MLR_all_refined_f)[9])
+row.names(all_refined_f) <- c("Proposal Final")
+colnames(all_refined_f) <- c("AIC", "BIC", "Adjusted R-Squared")
+IC <- rbind(IC_p1to7, all_refined_f)
+IC
+# MLR_all_refined_f is the best regression model so far. Only the spatial coordinates are to be discussed. Clean the dataset.
+newdata$X <- NULL
+newdata$Y <- NULL
+newdata$month <- NULL
+newdata$day <- NULL
+newdata$FFMC <- NULL
+newdata$DMC <- NULL
+newdata$DC <- NULL
+newdata$temp <- NULL
+newdata$RH <- NULL
+newdata$rain <- NULL
+newdata$newDC <- NULL
+newdata$newRH <- NULL
+newdata$day_0 <- NULL
+```
+
+```{r, echo = TRUE}
+# 6.a Conclusions and final model
+# 1. Explanatory variables DMC, DC, RH, day, spatial coordinates (X and Y) are considered to have little influence on the response variable "area". Hence, they are all excluded from my analysis.
+# 2. Log transformation is made for "area". Power transformations are made for "FFMC" and "temp". "FFMC" and "ISI" are combined into a new variable FWI_0.
+# 3. In "MLR_all_refined_f", "rain" was split into two dummy variables to denote the possibilities of no, small and heavy rains. "Month" was split into two dummy variables to denote 3 different levels of likelihood.
+summary(MLR_all_refined_f) 
+# 4. From the final verification, we can see that the p-values of all remaining explanatory variables are acceptable (<0.25). However, the signs of "rain_2" (+) and "month_1" (-) are counterintuitive probably because of their collinearity with "rain_1" and "month_2", respectively. Therefore, I exclude them and end up denoting both "rain" and "month" with only one dummy variable, though the adjusted R-squared is decreased a little.
+log_area <- log(area + 1)
+newtemp <- temp^4.5
+newFFMC <- FFMC^0.4
+FWI_0 = newFFMC + ISI
+MLR_all_refined_f_v = lm(log_area ~ FWI_0 + newtemp + wind + rain_1 + month_2)
+summary(MLR_all_refined_f_v)
+AIC_all_refined_f_v = nrow(data)*log(sum(residuals(MLR_all_refined_f_v)^2)/nrow(data)) + 2*(5+1)
+BIC_all_refined_f_v = nrow(data)*log(sum(residuals(MLR_all_refined_f_v)^2)/nrow(data)) + log(nrow(data))*(5+1)
+all_refined_f_v <- data.frame(AIC_all_refined_f_v, BIC_all_refined_f_v, summary(MLR_all_refined_f_v)[9])
+row.names(all_refined_f_v) <- c("Final Verified Model")
+colnames(all_refined_f_v) <- c("AIC", "BIC", "Adjusted R-Squared")
+IC <- rbind(IC, all_refined_f_v)
+IC
+vif(MLR_all_refined_f_v)
+crPlots(MLR_all_refined_f_v, main = "Component and Residual Plot of the best fitted model", ylab = "Residuals")
+# "MLR_all_refined_f_v" is thereby the best fitted model after verification.
+```
+
+```{r, echo = TRUE}
+# 6.b Model more fitted if row 239 and row 500 are taken?
+newdata <- newdata[-c(239,500),]
+newdata$rain_2 <- NULL
+newdata$month_1 <- NULL
+newdata$coord_1 <- NULL
+newdata$coord_2 <- NULL
+log_area <- log(newdata$area + 1)
+FWI_0 <- newdata$newFFMC + newdata$ISI
+newtemp <- newdata$newtemp
+wind <- newdata$wind
+rain_1 <- newdata$rain_1
+month_2 <- newdata$month_2
+MLR_all_refined_f_v = lm(log_area ~ FWI_0 + newtemp + wind + rain_1 + month_2)
+summary(MLR_all_refined_f_v)
+# Adjusted R-squared increases a little bit, and rain_1 has slightly higher significance.
+```

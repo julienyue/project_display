@@ -1,0 +1,17 @@
+reset;
+
+model Case1.mod;
+
+data Case1.dat;
+
+expand prof, Con1, Con2, Con3, Con4, Con5, Con6;
+
+option solver cplex;
+
+option presolve 1;
+
+option cplex_options 'sensitivity';
+
+solve;
+
+display X, prof, _objname, _obj, _varname, _var, _var.rc, _var.down, _var.up, _var.current, _conname, _con, _con.slack, _con.current, _con.down, _con.up >> Case1.txt;

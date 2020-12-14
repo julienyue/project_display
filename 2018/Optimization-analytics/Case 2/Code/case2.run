@@ -1,0 +1,11 @@
+reset;
+
+model Case2.mod;
+
+data Case2.dat;
+
+option solver cplex;
+
+solve;
+
+display b1, b2, y, z, tfc, profit >> case2.txt;

@@ -1,0 +1,66 @@
+param n := 9;
+param m := 7;
+
+param   C :=
+        1   20
+        2   30
+        3   40
+        4   50
+        5   80
+        6   125
+        7   100
+        8   250
+        9   325;
+param   A:  1   2   3   4   5   6   7   8   9:=
+        1   15  17  19  23  28  32  76  93  110
+        2   14  24  30  0   0   0   0   0   0
+        3   8   15  24  0   0   0   0   0   0
+        4   0   0   0   22  40  55  25  45  60
+        5   1.5 2   2.5 0   0   0   0   0   0
+        6   1   1   1   1   1   1   0   0   0
+        7   0   0   0   3   4   5   3   4   5;
+param   B :=
+        1   230400
+        2   65000
+        3   60000
+        4   175000
+        5   9600
+        6   9600
+        7   19200;
+param   Ord :=
+        1   750
+        2   1500
+        3   100
+        4   400
+        5   1500
+        6   100
+        7   25
+        8   150
+        9   50;
+param   Min :=
+        1   20
+        2   40
+        3   10
+        4   20
+        5   40
+        6   5;
+param   Max :=
+        1   50
+        2   60
+        3   20
+        4   35
+        5   70
+        6   15;
+        
+# C: Objective coefficients of the primal problem
+     # Cj: Unit profit earned by producing one desk j
+# A: Coefficient matrix
+     # Aij: Units of resource i used to produce one desk j
+# B: Right-hand-side constraints of the limited resources
+     # Bi: The maximum amount that resource i is available 
+# Ord: Orders that give the minimum number of each desk to be produced
+     # Ord_j: Minimum number of desk j to be produced
+# Min: Minimum quota
+     # Min_q: minimum quota of a certain class of desks
+# Max: Maximum quota
+     # Max_q: maximum quota of a certain class of desks
